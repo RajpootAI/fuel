@@ -15,7 +15,9 @@ import {
   Filter, 
   TrendingUp, 
   FileText,
-  AlertCircle
+  AlertCircle,
+  CheckCircle2,
+  Clock3
 } from 'lucide-react';
 
 export default function FuelReports({ 
@@ -509,6 +511,7 @@ export default function FuelReports({
                   <th>Quantity (L)</th>
                   <th>Rate (Rs.)</th>
                   <th>Total Cost</th>
+                  <th>Status</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -559,6 +562,46 @@ export default function FuelReports({
 
                     <td style={{ fontWeight: 800, color: '#047857', fontSize: '0.94rem' }}>
                       {formatCurrency(r.totalCost)}
+                    </td>
+
+                    <td>
+                      {r.status === 'Filled' ? (
+                        <span 
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: '#ECFDF5',
+                            color: '#047857',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            border: '1px solid #A7F3D0'
+                          }}
+                        >
+                          <CheckCircle2 size={12} />
+                          Filled
+                        </span>
+                      ) : (
+                        <span 
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: '#FFFBEB',
+                            color: '#B45309',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            border: '1px solid #FDE68A'
+                          }}
+                        >
+                          <Clock3 size={12} />
+                          Pending
+                        </span>
+                      )}
                     </td>
 
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>

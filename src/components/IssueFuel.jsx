@@ -10,6 +10,7 @@ import {
   Calendar, 
   FileText, 
   CheckCircle2, 
+  Clock3,
   RefreshCw, 
   Printer, 
   Trash2,
@@ -611,6 +612,7 @@ export default function IssueFuel({
                   <th>Type</th>
                   <th>Liters</th>
                   <th>Total Cost</th>
+                  <th>Status</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -665,6 +667,45 @@ export default function IssueFuel({
                     </td>
                     <td style={{ fontWeight: 800, color: '#047857' }}>
                       {formatCurrency(tx.totalCost)}
+                    </td>
+                    <td>
+                      {tx.status === 'Filled' ? (
+                        <span 
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: '#ECFDF5',
+                            color: '#047857',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            border: '1px solid #A7F3D0'
+                          }}
+                        >
+                          <CheckCircle2 size={12} />
+                          Filled
+                        </span>
+                      ) : (
+                        <span 
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            backgroundColor: '#FFFBEB',
+                            color: '#B45309',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            border: '1px solid #FDE68A'
+                          }}
+                        >
+                          <Clock3 size={12} />
+                          Pending
+                        </span>
+                      )}
                     </td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

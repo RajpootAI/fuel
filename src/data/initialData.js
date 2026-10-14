@@ -104,7 +104,9 @@ export const INITIAL_TRANSACTIONS = [
     liters: 45.5,
     ratePerLiter: 275.50,
     totalCost: 12535.25,
-    remarks: "Official executive travel - Lahore site audit"
+    remarks: "Official executive travel - Lahore site audit",
+    status: "Filled",
+    filledAt: "2026-03-25T10:45"
   },
   {
     id: "TXN-1002",
@@ -118,7 +120,9 @@ export const INITIAL_TRANSACTIONS = [
     liters: 180.0,
     ratePerLiter: 284.00,
     totalCost: 51120.00,
-    remarks: "Heavy freight delivery - Lahore to Gujranwala corridor"
+    remarks: "Heavy freight delivery - Lahore to Gujranwala corridor",
+    status: "Filled",
+    filledAt: "2026-03-26T14:30"
   },
   {
     id: "TXN-1003",
@@ -132,7 +136,9 @@ export const INITIAL_TRANSACTIONS = [
     liters: 65.0,
     ratePerLiter: 275.50,
     totalCost: 17907.50,
-    remarks: "Inter-city staff shuttle service"
+    remarks: "Inter-city staff shuttle service",
+    status: "Pending",
+    filledAt: null
   },
   {
     id: "TXN-1004",
@@ -146,12 +152,13 @@ export const INITIAL_TRANSACTIONS = [
     liters: 42.0,
     ratePerLiter: 275.50,
     totalCost: 11571.00,
-    remarks: "Local client inspections and head office returns"
+    remarks: "Local client inspections and head office returns",
+    status: "Pending",
+    filledAt: null
   }
 ];
 
-
-// Phase 5: Seed User Accounts for Role-Based Access Control
+// Phase 5 & 6: Seed User Accounts for Role-Based Access Control
 export const INITIAL_USERS = [
   {
     id: "USR-001",
@@ -178,7 +185,9 @@ export const INITIAL_USERS = [
     username: "driver1",
     email: "driver1@fuelflow.com",
     password: "driver123",
-    fullName: "Muhammad Ali (Driver)",
+    fullName: "Muhammad Ali",
+    driverName: "Muhammad Ali",
+    driverId: "DRV-101",
     role: "Driver",
     status: "Active",
     createdAt: "2026-03-10"
@@ -188,7 +197,9 @@ export const INITIAL_USERS = [
     username: "pump1",
     email: "pump1@fuelflow.com",
     password: "pump123",
-    fullName: "PSO Station Attendant",
+    fullName: "PSO Main Boulevard Station",
+    pumpName: "PSO Main Boulevard Station",
+    pumpId: "PMP-101",
     role: "Fuel Pump",
     status: "Active",
     createdAt: "2026-03-12"

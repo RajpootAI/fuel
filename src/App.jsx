@@ -9,6 +9,8 @@ import ManageDrivers from './components/ManageDrivers';
 import ManagePumps from './components/ManagePumps';
 import ManageUsers from './components/ManageUsers';
 import Login from './components/Login';
+import DriverPortal from './components/DriverPortal';
+import PumpPortal from './components/PumpPortal';
 import DualSlipPreview from './components/DualSlipPreview';
 import TestDropdownModal from './components/TestDropdownModal';
 import { 
@@ -24,6 +26,7 @@ import {
   getTransactions,
   addFuelIssue,
   deleteFuelIssue,
+  updateTransactionStatus,
   getDashboardMetrics,
   resetToSampleData,
   getCurrentUser,
@@ -103,6 +106,12 @@ export default function App() {
     showToast('Signed out of system successfully.', 'info');
   };
 
+  // Status updates from Fuel Pump station or admin
+  const handleUpdateSlipStatus = (slipId, newStatus) => {
+    updateTransactionStatus(slipId, newStatus);
+    reloadAllData();
+  };
+
   // Role permissions
   const isAdmin = currentUser?.role === 'Admin';
   // Manager and others cannot delete vehicles, drivers, pumps, or fuel records
@@ -178,7 +187,7 @@ export default function App() {
     }
   };
 
-  // If no user is logged in, show the Login Screen
+  // 1. If no user is logged in, show the Login Screen
   if (!currentUser) {
     return (
       <>
@@ -201,6 +210,92 @@ export default function App() {
     );
   }
 
+  // 2. PHASE 6: DEDICATED DRIVER PORTAL VIEW (Main Admin Sidebar Hidden)
+  if (currentUser.role === 'Driver') {
+    return (
+      <div className="portal-app-shell">
+        <DriverPortal 
+          currentUser={currentUser}
+          vehicles={vehicles}
+          transactions={transactions}
+          onLogout={handleLogout}
+          onOpenSlipPreview={(slip) => setSelectedSlipForPreview(slip)}
+        />
+
+        {/* Dual Printable Slip Preview */}
+        {selectedSlipForPreview && (
+          <DualSlipPreview 
+            slip={selectedSlipForPreview}
+            vehicles={vehicles}
+            drivers={drivers}
+            pumps={pumps}
+            onClose={() => setSelectedSlipForPreview(null)}
+          />
+        )}
+
+        {/* Toast Notification Container */}
+        {toast && (
+          <div className="toast-container">
+            <div className={`toast ${toast.type === 'danger' ? 'toast-danger' : toast.type === 'info' ? 'toast-info' : 'toast-success'}`}>
+              {toast.type === 'danger' ? (
+                <AlertCircle size={18} style={{ color: '#EF4444' }} />
+              ) : toast.type === 'info' ? (
+                <Info size={18} style={{ color: '#0284C7' }} />
+              ) : (
+                <CheckCircle2 size={18} style={{ color: '#10B981' }} />
+              )}
+              <span>{toast.message}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 3. PHASE 6: DEDICATED FUEL PUMP STATION PORTAL VIEW (Main Admin Sidebar Hidden)
+  if (currentUser.role === 'Fuel Pump') {
+    return (
+      <div className="portal-app-shell">
+        <PumpPortal 
+          currentUser={currentUser}
+          transactions={transactions}
+          onUpdateStatus={handleUpdateSlipStatus}
+          onLogout={handleLogout}
+          onOpenSlipPreview={(slip) => setSelectedSlipForPreview(slip)}
+          onShowToast={showToast}
+        />
+
+        {/* Dual Printable Slip Preview */}
+        {selectedSlipForPreview && (
+          <DualSlipPreview 
+            slip={selectedSlipForPreview}
+            vehicles={vehicles}
+            drivers={drivers}
+            pumps={pumps}
+            onClose={() => setSelectedSlipForPreview(null)}
+          />
+        )}
+
+        {/* Toast Notification Container */}
+        {toast && (
+          <div className="toast-container">
+            <div className={`toast ${toast.type === 'danger' ? 'toast-danger' : toast.type === 'info' ? 'toast-info' : 'toast-success'}`}>
+              {toast.type === 'danger' ? (
+                <AlertCircle size={18} style={{ color: '#EF4444' }} />
+              ) : toast.type === 'info' ? (
+                <Info size={18} style={{ color: '#0284C7' }} />
+              ) : (
+                <CheckCircle2 size={18} style={{ color: '#10B981' }} />
+              )}
+              <span>{toast.message}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 4. ADMIN & MANAGER ROLE VIEW (With Sidebar Navigation)
   return (
     <div className="app-layout">
       {/* Sidebar Navigation */}
@@ -301,6 +396,8 @@ export default function App() {
         {activeTab === 'users' && isAdmin && (
           <ManageUsers 
             onShowToast={showToast}
+            drivers={drivers}
+            pumps={pumps}
           />
         )}
       </div>

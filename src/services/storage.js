@@ -190,23 +190,27 @@ export function deletePump(id) {
   return updated;
 }
 
+// TRANSACTIONS API
 export function getTransactions() {
   initializeStorage();
   const txns = safeGet(STORAGE_KEYS.TRANSACTIONS, INITIAL_TRANSACTIONS);
   let needsSync = false;
   const normalized = txns.map((t, idx) => {
-    if (!t.slipNumber) {
+    let item = { ...t };
+    if (!item.slipNumber) {
       needsSync = true;
-      return {
-        ...t,
-        slipNumber: `FL-${1001 + idx}`,
-        dateTime: t.dateTime || (t.date ? `${t.date}T10:00` : new Date().toISOString().slice(0, 16)),
-        fuelType: t.fuelType?.includes('Diesel') ? 'Diesel' : (t.fuelType || 'Petrol'),
-        odometerReading: t.odometerReading || (45000 + idx * 4500),
-        remarks: t.remarks || 'Official fleet operation travel'
-      };
+      item.slipNumber = `FL-${1001 + idx}`;
+      item.dateTime = item.dateTime || (item.date ? `${item.date}T10:00` : new Date().toISOString().slice(0, 16));
+      item.fuelType = item.fuelType?.includes('Diesel') ? 'Diesel' : (item.fuelType || 'Petrol');
+      item.odometerReading = item.odometerReading || (45000 + idx * 4500);
+      item.remarks = item.remarks || 'Official fleet operation travel';
     }
-    return t;
+    if (!item.status) {
+      needsSync = true;
+      item.status = (idx < 2) ? 'Filled' : 'Pending';
+      item.filledAt = (idx < 2) ? (item.dateTime || new Date().toISOString()) : null;
+    }
+    return item;
   });
   if (needsSync) {
     safeSet(STORAGE_KEYS.TRANSACTIONS, normalized);
@@ -251,12 +255,35 @@ export function addFuelIssue(issueData) {
     ratePerLiter: ratePerLiter,
     totalCost: totalCost,
     remarks: issueData.remarks?.trim() || '',
+    status: issueData.status || 'Pending',
+    filledAt: issueData.status === 'Filled' ? new Date().toISOString() : null,
     createdAt: new Date().toISOString()
   };
 
   const updated = [newSlip, ...txns];
   safeSet(STORAGE_KEYS.TRANSACTIONS, updated);
   return newSlip;
+}
+
+export function updateTransactionStatus(id, newStatus) {
+  const txns = getTransactions();
+  const now = new Date().toISOString();
+  let updatedRecord = null;
+
+  const updated = txns.map((t) => {
+    if (t.id === id || t.slipNumber === id) {
+      updatedRecord = {
+        ...t,
+        status: newStatus,
+        filledAt: newStatus === 'Filled' ? (t.filledAt || now) : null
+      };
+      return updatedRecord;
+    }
+    return t;
+  });
+
+  safeSet(STORAGE_KEYS.TRANSACTIONS, updated);
+  return updatedRecord;
 }
 
 export function deleteFuelIssue(id) {
@@ -294,7 +321,7 @@ export function getDashboardMetrics() {
 }
 
 // ==========================================
-// PHASE 5: USERS & AUTHENTICATION API
+// PHASE 5 & 6: USERS & AUTHENTICATION API
 // ==========================================
 
 export function getUsers() {
@@ -317,6 +344,8 @@ export function addUser(userData) {
     email: userData.email?.trim() || `${cleanUsername}@fuelflow.com`,
     password: userData.password || 'password123',
     fullName: userData.fullName?.trim() || cleanUsername,
+    driverName: userData.driverName?.trim() || (userData.role === 'Driver' ? userData.fullName?.trim() : undefined),
+    pumpName: userData.pumpName?.trim() || (userData.role === 'Fuel Pump' ? userData.fullName?.trim() : undefined),
     role: userData.role || 'Manager',
     status: userData.status || 'Active',
     createdAt: new Date().toISOString().split('T')[0]
@@ -387,6 +416,14 @@ export function authenticate(identifier, password, selectedRole) {
     };
   }
 
+  // Ensure linked name fields for driver / pump
+  if (found.role === 'Driver' && !found.driverName) {
+    found.driverName = found.fullName;
+  }
+  if (found.role === 'Fuel Pump' && !found.pumpName) {
+    found.pumpName = found.fullName;
+  }
+
   setCurrentUser(found);
   return { success: true, user: found };
 }
@@ -395,6 +432,14 @@ export function quickLoginAsRole(role) {
   const users = getUsers();
   const match = users.find((u) => u.role.toLowerCase() === role.toLowerCase());
   if (match) {
+    if (match.role === 'Driver') {
+      match.driverName = match.driverName || 'Muhammad Ali';
+      match.fullName = match.fullName || 'Muhammad Ali';
+    }
+    if (match.role === 'Fuel Pump') {
+      match.pumpName = match.pumpName || 'PSO Main Boulevard Station';
+      match.fullName = match.fullName || 'PSO Main Boulevard Station';
+    }
     setCurrentUser(match);
     return match;
   }
@@ -403,7 +448,9 @@ export function quickLoginAsRole(role) {
   const fallback = {
     id: `USR-${Date.now()}`,
     username: role.toLowerCase().replace(/\s+/g, ''),
-    fullName: `${role} User`,
+    fullName: role === 'Driver' ? 'Muhammad Ali' : role === 'Fuel Pump' ? 'PSO Main Boulevard Station' : `${role} User`,
+    driverName: role === 'Driver' ? 'Muhammad Ali' : undefined,
+    pumpName: role === 'Fuel Pump' ? 'PSO Main Boulevard Station' : undefined,
     role: role,
     status: 'Active',
     createdAt: new Date().toISOString().split('T')[0]

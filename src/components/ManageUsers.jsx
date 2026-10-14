@@ -20,7 +20,11 @@ import {
 } from 'lucide-react';
 import { getUsers, addUser, deleteUser } from '../services/storage';
 
-export default function ManageUsers({ onShowToast }) {
+export default function ManageUsers({ 
+  onShowToast,
+  drivers = [],
+  pumps = []
+}) {
   const [users, setUsers] = useState(() => getUsers());
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
@@ -484,6 +488,68 @@ export default function ManageUsers({ onShowToast }) {
                     Managers cannot delete records; Admins have 100% control.
                   </div>
                 </div>
+
+                {/* Optional Quick Link to Registered Driver */}
+                {formData.role === 'Driver' && drivers.length > 0 && (
+                  <div className="form-group" style={{ backgroundColor: '#F0FDF4', padding: '10px 12px', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
+                    <label className="form-label" style={{ color: '#166534', fontWeight: 700 }}>
+                      Link to Registered Fleet Driver
+                    </label>
+                    <select
+                      className="form-select"
+                      onChange={(e) => {
+                        const dName = e.target.value;
+                        if (dName) {
+                          setFormData({
+                            ...formData,
+                            fullName: dName,
+                            driverName: dName,
+                            username: `driver_${dName.toLowerCase().replace(/[^a-z0-9]/g, '')}`
+                          });
+                        }
+                      }}
+                    >
+                      <option value="">-- Select Registered Driver to Auto-fill --</option>
+                      {drivers.map(d => (
+                        <option key={d.id} value={d.name}>{d.name} ({d.phone})</option>
+                      ))}
+                    </select>
+                    <div className="form-helper" style={{ color: '#15803D' }}>
+                      Auto-populates full name and generates username
+                    </div>
+                  </div>
+                )}
+
+                {/* Optional Quick Link to Registered Fuel Station */}
+                {formData.role === 'Fuel Pump' && pumps.length > 0 && (
+                  <div className="form-group" style={{ backgroundColor: '#FEF3C7', padding: '10px 12px', borderRadius: '8px', border: '1px solid #FDE68A' }}>
+                    <label className="form-label" style={{ color: '#92400E', fontWeight: 700 }}>
+                      Link to Registered Fuel Station
+                    </label>
+                    <select
+                      className="form-select"
+                      onChange={(e) => {
+                        const pName = e.target.value;
+                        if (pName) {
+                          setFormData({
+                            ...formData,
+                            fullName: pName,
+                            pumpName: pName,
+                            username: `pump_${pName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10)}`
+                          });
+                        }
+                      }}
+                    >
+                      <option value="">-- Select Registered Station to Auto-fill --</option>
+                      {pumps.map(p => (
+                        <option key={p.id} value={p.pumpName}>{p.pumpName} ({p.location})</option>
+                      ))}
+                    </select>
+                    <div className="form-helper" style={{ color: '#B45309' }}>
+                      Auto-populates station name and generates username
+                    </div>
+                  </div>
+                )}
 
                 {/* Full Name */}
                 <div className="form-group">
