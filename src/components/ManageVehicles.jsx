@@ -4,17 +4,18 @@ import {
   Plus, 
   Search, 
   Trash2, 
+  Pencil,
   User, 
   X, 
-  Sparkles,
   Filter
 } from 'lucide-react';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
 
 export default function ManageVehicles({ 
-  vehicles, 
-  drivers, 
+  vehicles = [], 
+  drivers = [], 
   onAddVehicle, 
+  onUpdateVehicle,
   onDeleteVehicle, 
   onShowToast,
   canDelete = true
@@ -22,6 +23,7 @@ export default function ManageVehicles({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Form state
@@ -47,6 +49,7 @@ export default function ManageVehicles({
   });
 
   const handleOpenAddModal = () => {
+    setEditingVehicle(null);
     setFormData({
       vehicleNumber: '',
       vehicleType: 'Car',
@@ -58,66 +61,104 @@ export default function ManageVehicles({
     setIsModalOpen(true);
   };
 
+  const handleOpenEditModal = (vehicle) => {
+    setEditingVehicle(vehicle);
+    const isDriverInList = drivers.some(d => d.name === vehicle.assignedDriverName);
+    const isUnassigned = vehicle.assignedDriverName === 'Unassigned' || !vehicle.assignedDriverName;
+
+    setFormData({
+      vehicleNumber: vehicle.vehicleNumber,
+      vehicleType: vehicle.vehicleType || 'Car',
+      assignedDriverName: (isDriverInList || isUnassigned) ? (vehicle.assignedDriverName || 'Unassigned') : 'CUSTOM',
+      customDriverName: (!isDriverInList && !isUnassigned) ? vehicle.assignedDriverName : ''
+    });
+    setUseCustomDriver(!isDriverInList && !isUnassigned);
+    setFormError('');
+    setIsModalOpen(true);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    setFormError('');
+
     const cleanNumber = formData.vehicleNumber.trim().toUpperCase();
-
     if (!cleanNumber) {
-      setFormError('Please enter a vehicle registration number (e.g., LEA-1234).');
+      setFormError('Vehicle Number is required (e.g., LEA-1234).');
       return;
     }
 
-    // Check duplicate
-    const exists = vehicles.some((v) => v.vehicleNumber.toUpperCase() === cleanNumber);
-    if (exists) {
-      setFormError(`Vehicle "${cleanNumber}" is already registered in the system.`);
-      return;
-    }
-
-    const assignedDriver = useCustomDriver 
-      ? (formData.customDriverName.trim() || 'Unassigned')
-      : formData.assignedDriverName;
-
-    onAddVehicle({
-      vehicleNumber: cleanNumber,
-      vehicleType: formData.vehicleType,
-      assignedDriverName: assignedDriver
+    // Check duplicate plate
+    const isDuplicate = vehicles.some((v) => {
+      if (editingVehicle && v.id === editingVehicle.id) return false;
+      return v.vehicleNumber.toUpperCase() === cleanNumber;
     });
 
-    onShowToast(`Vehicle ${cleanNumber} registered successfully!`, 'success');
+    if (isDuplicate) {
+      setFormError(`Vehicle with license plate "${cleanNumber}" already exists.`);
+      return;
+    }
+
+    let finalDriver = formData.assignedDriverName;
+    if (useCustomDriver) {
+      finalDriver = formData.customDriverName.trim() || 'Unassigned';
+    }
+
+    if (editingVehicle) {
+      if (onUpdateVehicle) {
+        onUpdateVehicle(editingVehicle.id, {
+          vehicleNumber: cleanNumber,
+          vehicleType: formData.vehicleType,
+          assignedDriverName: finalDriver
+        });
+      }
+      onShowToast(`Vehicle ${cleanNumber} updated successfully!`, 'success');
+    } else {
+      onAddVehicle({
+        vehicleNumber: cleanNumber,
+        vehicleType: formData.vehicleType,
+        assignedDriverName: finalDriver
+      });
+      onShowToast(`Vehicle ${cleanNumber} registered successfully!`, 'success');
+    }
+
     setIsModalOpen(false);
   };
 
-  const handleConfirmDelete = () => {
+  const handleDeleteConfirm = () => {
     if (deleteTarget) {
       onDeleteVehicle(deleteTarget.id);
-      onShowToast(`Vehicle ${deleteTarget.vehicleNumber} was removed.`, 'danger');
+      onShowToast(`Vehicle ${deleteTarget.vehicleNumber} removed`, 'danger');
       setDeleteTarget(null);
     }
   };
 
-  const getTypeBadgeClass = (type) => {
-    switch (type.toLowerCase()) {
-      case 'car': return 'car';
-      case 'truck': return 'truck';
-      case 'bike': return 'bike';
-      case 'van': return 'van';
-      default: return 'car';
+  const getVehicleBadgeColor = (type) => {
+    switch (type?.toLowerCase()) {
+      case 'car':
+        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' };
+      case 'truck':
+        return { bg: '#FEF3C7', text: '#B45309', border: '#FDE68A' };
+      case 'van':
+        return { bg: '#F3E8FF', text: '#7E22CE', border: '#E9D5FF' };
+      case 'bike':
+        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0' };
+      default:
+        return { bg: '#F1F5F9', text: '#475569', border: '#E2E8F0' };
     }
   };
 
   return (
-    <div className="page-content">
-      {/* Header and Controls */}
+    <div className="view-container">
+      {/* View Header */}
       <div className="view-header">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-main)' }}>
-              Registered Vehicles
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+              Company Vehicles
             </h3>
             <span 
               style={{ 
-                fontSize: '0.8rem', 
+                fontSize: '0.78rem', 
                 fontWeight: 700, 
                 backgroundColor: '#EFF6FF', 
                 color: '#1D4ED8', 
@@ -180,12 +221,20 @@ export default function ManageVehicles({
           {filteredVehicles.length === 0 ? (
             <div className="empty-state">
               <Car className="empty-icon" />
-              <h4 className="empty-title">No vehicles found</h4>
+              <h4 className="empty-title">
+                {vehicles.length === 0 ? 'No fleet vehicles registered yet' : 'No matching vehicles found'}
+              </h4>
               <p className="empty-description">
-                {searchQuery || selectedTypeFilter !== 'ALL'
-                  ? 'Try changing your search term or filter options.'
-                  : 'Get started by clicking "+ Add Vehicle" to register your first vehicle.'}
+                {vehicles.length === 0 
+                  ? "Click the 'Add Vehicle' button above to register your first company vehicle."
+                  : 'Try adjusting your search query or vehicle type filter.'}
               </p>
+              {vehicles.length === 0 && (
+                <button className="btn-primary" onClick={handleOpenAddModal} style={{ marginTop: '14px' }}>
+                  <Plus size={16} />
+                  <span>Register First Vehicle</span>
+                </button>
+              )}
             </div>
           ) : (
             <table className="data-table">
@@ -195,91 +244,98 @@ export default function ManageVehicles({
                   <th>Vehicle Type</th>
                   <th>Assigned Driver</th>
                   <th>Status</th>
-                  <th>Registered On</th>
+                  <th>Registered</th>
                   <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredVehicles.map((vehicle) => (
-                  <tr key={vehicle.id}>
-                    <td>
-                      <span className="license-plate-badge">
-                        {vehicle.vehicleNumber}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`type-badge ${getTypeBadgeClass(vehicle.vehicleType)}`}>
-                        {vehicle.vehicleType}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div 
-                          style={{ 
-                            width: '26px', 
-                            height: '26px', 
-                            borderRadius: '50%', 
-                            backgroundColor: vehicle.assignedDriverName === 'Unassigned' ? '#F1F5F9' : '#EFF6FF',
-                            color: vehicle.assignedDriverName === 'Unassigned' ? '#94A3B8' : '#2563EB',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          <User size={14} />
+                {filteredVehicles.map((vehicle) => {
+                  const badge = getVehicleBadgeColor(vehicle.vehicleType);
+                  return (
+                    <tr key={vehicle.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="license-plate-badge">
+                            {vehicle.vehicleNumber}
+                          </span>
                         </div>
+                      </td>
+                      <td>
                         <span 
-                          style={{ 
-                            fontWeight: vehicle.assignedDriverName === 'Unassigned' ? 400 : 600,
-                            color: vehicle.assignedDriverName === 'Unassigned' ? 'var(--text-muted)' : 'var(--text-main)',
-                            fontStyle: vehicle.assignedDriverName === 'Unassigned' ? 'italic' : 'normal'
+                          style={{
+                            display: 'inline-block',
+                            padding: '3px 10px',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            backgroundColor: badge.bg,
+                            color: badge.text,
+                            border: `1px solid ${badge.border}`
                           }}
                         >
-                          {vehicle.assignedDriverName || 'Unassigned'}
+                          {vehicle.vehicleType}
                         </span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="status-badge">
-                        <span className="dot" />
-                        {vehicle.status || 'Active'}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                      {vehicle.createdAt || '2026-03-10'}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      {canDelete ? (
-                        <button 
-                          className="btn-icon-delete"
-                          onClick={() => setDeleteTarget(vehicle)}
-                          title="Delete vehicle record"
-                        >
-                          <Trash2 size={15} />
-                          <span>Delete</span>
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
-                          View Only
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <User size={14} style={{ color: '#2563EB' }} />
+                          <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>
+                            {vehicle.assignedDriverName || 'Unassigned'}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="status-badge">
+                          <span className="dot" />
+                          {vehicle.status || 'Active'}
                         </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        {vehicle.createdAt || 'Today'}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          {/* Edit Button (Admin & Manager) */}
+                          <button 
+                            className="btn-secondary"
+                            style={{ padding: '5px 10px', fontSize: '0.78rem' }}
+                            onClick={() => handleOpenEditModal(vehicle)}
+                            title="Edit vehicle details"
+                          >
+                            <Pencil size={13} />
+                            <span>Edit</span>
+                          </button>
+
+                          {/* Delete Button (Admin Only) */}
+                          {canDelete && (
+                            <button 
+                              className="btn-icon-delete"
+                              onClick={() => setDeleteTarget(vehicle)}
+                              title="Delete vehicle record"
+                            >
+                              <Trash2 size={14} />
+                              <span>Delete</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
         </div>
       </div>
 
-      {/* Add Vehicle Modal */}
+      {/* Add / Edit Vehicle Modal */}
       {isModalOpen && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title">
                 <Car size={20} style={{ color: '#2563EB' }} />
-                Add New Fleet Vehicle
+                {editingVehicle ? 'Edit Fleet Vehicle' : 'Add New Fleet Vehicle'}
               </div>
               <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
                 <X size={18} />
@@ -307,20 +363,18 @@ export default function ManageVehicles({
                 {/* Field 1: Vehicle Number */}
                 <div className="form-group">
                   <label className="form-label">
-                    Vehicle Number (Registration / Plate) <span className="req">*</span>
+                    Vehicle Number (License Plate) <span className="req">*</span>
                   </label>
                   <input 
                     type="text"
                     className="form-input"
-                    placeholder="e.g., LEA-1234, KHI-9876, ISB-5544"
+                    placeholder="e.g., LEA-1234 or KHI-9876"
                     value={formData.vehicleNumber}
-                    onChange={(e) => setFormData({ ...formData, vehicleNumber: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, vehicleNumber: e.target.value.toUpperCase() })}
                     required
-                    autoFocus
-                    style={{ textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}
                   />
                   <div className="form-helper">
-                    Format: City code followed by registration number (e.g., LEA-1234)
+                    Official registration plate format
                   </div>
                 </div>
 
@@ -334,69 +388,77 @@ export default function ManageVehicles({
                     value={formData.vehicleType}
                     onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value })}
                   >
-                    <option value="Car">Car (Sedan / Hatchback)</option>
-                    <option value="Bike">Bike (Motorcycle / Delivery)</option>
-                    <option value="Truck">Truck (Heavy Transport / Logistics)</option>
-                    <option value="Van">Van (Passenger / Cargo Van)</option>
+                    <option value="Car">Car</option>
+                    <option value="Bike">Bike (Motorcycle)</option>
+                    <option value="Truck">Truck (Heavy Freight)</option>
+                    <option value="Van">Van (Passenger / Cargo)</option>
                   </select>
                 </div>
 
                 {/* Field 3: Assigned Driver Name */}
                 <div className="form-group">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label className="form-label" style={{ marginBottom: 0 }}>
-                      Assigned Driver Name
-                    </label>
-                    <button 
-                      type="button"
-                      onClick={() => setUseCustomDriver(!useCustomDriver)}
-                      style={{ 
-                        background: 'none', 
-                        border: 'none', 
-                        color: '#2563EB', 
-                        fontSize: '0.78rem', 
-                        cursor: 'pointer',
-                        fontWeight: 600 
-                      }}
-                    >
-                      {useCustomDriver ? '← Select from registered drivers' : '+ Enter custom driver name'}
-                    </button>
-                  </div>
-
+                  <label className="form-label">
+                    Assigned Driver
+                  </label>
                   {!useCustomDriver ? (
                     <select 
                       className="form-select"
                       value={formData.assignedDriverName}
-                      onChange={(e) => setFormData({ ...formData, assignedDriverName: e.target.value })}
+                      onChange={(e) => {
+                        if (e.target.value === 'CUSTOM') {
+                          setUseCustomDriver(true);
+                          setFormData({ ...formData, assignedDriverName: 'CUSTOM', customDriverName: '' });
+                        } else {
+                          setFormData({ ...formData, assignedDriverName: e.target.value });
+                        }
+                      }}
                     >
-                      <option value="Unassigned">-- Unassigned (No Driver Assigned) --</option>
-                      {drivers.map((drv) => (
-                        <option key={drv.id} value={drv.name}>
-                          {drv.name} ({drv.phone})
+                      <option value="Unassigned">-- Unassigned --</option>
+                      {drivers.map((d) => (
+                        <option key={d.id} value={d.name}>
+                          {d.name} {d.phone ? `(${d.phone})` : ''}
                         </option>
                       ))}
+                      <option value="CUSTOM">+ Type new driver name...</option>
                     </select>
                   ) : (
-                    <input 
-                      type="text"
-                      className="form-input"
-                      placeholder="Type driver full name..."
-                      value={formData.customDriverName}
-                      onChange={(e) => setFormData({ ...formData, customDriverName: e.target.value })}
-                    />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input 
+                        type="text"
+                        className="form-input"
+                        placeholder="Enter driver name"
+                        value={formData.customDriverName}
+                        onChange={(e) => setFormData({ ...formData, customDriverName: e.target.value })}
+                        autoFocus
+                      />
+                      <button 
+                        type="button" 
+                        className="btn-secondary"
+                        onClick={() => {
+                          setUseCustomDriver(false);
+                          setFormData({ ...formData, assignedDriverName: 'Unassigned', customDriverName: '' });
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   )}
                   <div className="form-helper">
-                    Pre-populated from your Master Drivers directory for easy 1-click assignment.
+                    Driver assigned to operate this vehicle
                   </div>
                 </div>
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>
+                <button 
+                  type="button" 
+                  className="btn-secondary" 
+                  onClick={() => setIsModalOpen(false)}
+                >
                   Cancel
                 </button>
                 <button type="submit" className="btn-primary">
-                  Save Vehicle Record
+                  {editingVehicle ? 'Save Changes' : 'Register Vehicle'}
                 </button>
               </div>
             </form>
@@ -408,9 +470,9 @@ export default function ManageVehicles({
       <DeleteConfirmationModal 
         isOpen={Boolean(deleteTarget)}
         title="Delete Vehicle"
-        message={`Are you sure you want to permanently remove this vehicle from the fleet registry?`}
-        itemName={deleteTarget ? `${deleteTarget.vehicleNumber} (${deleteTarget.vehicleType})` : ''}
-        onConfirm={handleConfirmDelete}
+        message="Are you sure you want to delete vehicle"
+        itemName={deleteTarget?.vehicleNumber}
+        onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
       />
     </div>

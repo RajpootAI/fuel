@@ -176,53 +176,63 @@ export default function Dashboard({
                 </tr>
               </thead>
               <tbody>
-                {recentTransactions.map((tx) => (
-                  <tr key={tx.id}>
-                    <td>
-                      <span 
-                        style={{ 
-                          fontFamily: 'JetBrains Mono, monospace', 
-                          fontWeight: 700, 
-                          color: '#1D4ED8',
-                          backgroundColor: '#EFF6FF',
-                          padding: '2px 7px',
-                          borderRadius: '4px',
-                          fontSize: '0.8rem'
-                        }}
-                      >
-                        {tx.slipNumber || tx.id}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="license-plate-badge" style={{ fontSize: '0.78rem', padding: '2px 8px' }}>
-                        {tx.vehicleNumber}
-                      </span>
-                    </td>
-                    <td style={{ fontWeight: 500 }}>
-                      {tx.driverName}
-                    </td>
-                    <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                      {tx.pumpName}
-                    </td>
-                    <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
-                      {Number(tx.liters).toFixed(1)} L
-                    </td>
-                    <td style={{ fontWeight: 700, color: '#059669' }}>
-                      {formatCurrency(tx.totalCost)}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <button 
-                        className="btn-secondary"
-                        style={{ padding: '4px 10px', fontSize: '0.75rem', color: '#1D4ED8', borderColor: '#BFDBFE', fontWeight: 600 }}
-                        onClick={() => onOpenSlipPreview && onOpenSlipPreview(tx)}
-                        title="Open Dual Printable Slip (Single A4 Page)"
-                      >
-                        <Printer size={13} />
-                        <span>Print Slip</span>
-                      </button>
+                {recentTransactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '36px 16px', color: 'var(--text-secondary)' }}>
+                      <Receipt size={32} style={{ color: '#94A3B8', marginBottom: '8px', display: 'block', margin: '0 auto 8px' }} />
+                      <p style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>No fuel vouchers issued yet</p>
+                      <span style={{ fontSize: '0.82rem' }}>Click &quot;Issue Fuel&quot; above to create your first official fuel slip.</span>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  recentTransactions.map((tx) => (
+                    <tr key={tx.id}>
+                      <td>
+                        <span 
+                          style={{ 
+                            fontFamily: 'JetBrains Mono, monospace', 
+                            fontWeight: 700, 
+                            color: '#1D4ED8',
+                            backgroundColor: '#EFF6FF',
+                            padding: '2px 7px',
+                            borderRadius: '4px',
+                            fontSize: '0.8rem'
+                          }}
+                        >
+                          {tx.slipNumber || tx.id}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="license-plate-badge" style={{ fontSize: '0.78rem', padding: '2px 8px' }}>
+                          {tx.vehicleNumber}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: 500 }}>
+                        {tx.driverName}
+                      </td>
+                      <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        {tx.pumpName}
+                      </td>
+                      <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>
+                        {Number(tx.liters).toFixed(1)} L
+                      </td>
+                      <td style={{ fontWeight: 700, color: '#059669' }}>
+                        {formatCurrency(tx.totalCost)}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button 
+                          className="btn-secondary"
+                          style={{ padding: '4px 10px', fontSize: '0.75rem', color: '#1D4ED8', borderColor: '#BFDBFE', fontWeight: 600 }}
+                          onClick={() => onOpenSlipPreview && onOpenSlipPreview(tx)}
+                          title="Open Dual Printable Slip (Single A4 Page)"
+                        >
+                          <Printer size={13} />
+                          <span>Print Slip</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -310,7 +320,7 @@ export default function Dashboard({
               >
                 <Receipt size={17} style={{ color: '#93C5FD' }} />
                 <span>+ Issue Fuel (Add Slip)</span>
-                <span style={{ marginLeft: 'auto', fontSize: '0.76rem', backgroundColor: '#2563EB', padding: '2px 8px', borderRadius: '10px' }}>Phase 2</span>
+                <span style={{ marginLeft: 'auto', fontSize: '0.76rem', backgroundColor: '#2563EB', padding: '2px 8px', borderRadius: '10px' }}>Voucher Entry</span>
               </button>
 
               <button 

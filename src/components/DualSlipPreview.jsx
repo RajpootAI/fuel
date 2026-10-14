@@ -101,7 +101,9 @@ export default function DualSlipPreview({
           </div>
           <div className="meta-item" style={{ marginLeft: 'auto' }}>
             <span className="meta-label">STATUS:</span>
-            <span className="meta-status-authorized">AUTHORIZED</span>
+            <span className={`meta-status-authorized ${slip.status === 'Filled' ? 'status-filled-slip' : 'status-pending-slip'}`}>
+              {slip.status === 'Filled' ? 'FILLED / COMPLETED' : 'PENDING DISPENSING'}
+            </span>
           </div>
         </div>
 
@@ -198,17 +200,17 @@ export default function DualSlipPreview({
         <div className="slip-signatures-container">
           <div className="sig-column">
             <div className="sig-space" />
-            <div className="sig-title">Admin / Issuer Signature</div>
+            <div className="sig-title">Authorized Issuer Sign</div>
           </div>
 
           <div className="sig-column">
             <div className="sig-space" />
-            <div className="sig-title">Driver Signature</div>
+            <div className="sig-title">Driver Sign</div>
           </div>
 
           <div className="sig-column">
             <div className="sig-space" />
-            <div className="sig-title">Pump Manager Stamp & Sign</div>
+            <div className="sig-title">Pump Stamp & Sign</div>
           </div>
         </div>
       </div>

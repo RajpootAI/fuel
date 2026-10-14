@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
   Menu, 
-  RotateCcw, 
   UserCheck, 
   LogOut, 
   ShieldCheck, 
@@ -15,7 +14,6 @@ export default function Header({
   activeTab, 
   currentUser,
   onLogout,
-  onResetData, 
   onToggleSidebar 
 }) {
   const titles = {
@@ -37,15 +35,15 @@ export default function Header({
     },
     drivers: {
       title: 'Manage Drivers',
-      subtitle: 'Maintain company driver records, contact details, and CNIC/license info'
+      subtitle: 'Maintain company driver records, contact details, and login credentials'
     },
     pumps: {
       title: 'Manage Fuel Pumps (Stations)',
-      subtitle: 'Authorized fuel stations, vendor locations, and pump contact personnel'
+      subtitle: 'Authorized fuel stations, vendor locations, and station login credentials'
     },
     users: {
-      title: 'User Accounts & Access Control',
-      subtitle: 'Create and manage login usernames and passwords for Managers, Drivers, and Fuel Pumps (Admin Only)'
+      title: 'Manage Staff Users',
+      subtitle: 'Create and manage login accounts for Managers and Admins (Admin Only)'
     }
   };
 
@@ -58,7 +56,6 @@ export default function Header({
         return {
           bg: '#1E3A8A',
           color: '#FFFFFF',
-          border: '#172554',
           icon: ShieldCheck,
           label: 'Admin (Full Access)'
         };
@@ -66,7 +63,6 @@ export default function Header({
         return {
           bg: '#0284C7',
           color: '#FFFFFF',
-          border: '#0369A1',
           icon: Briefcase,
           label: 'Manager (Restricted Delete)'
         };
@@ -74,7 +70,6 @@ export default function Header({
         return {
           bg: '#059669',
           color: '#FFFFFF',
-          border: '#047857',
           icon: Car,
           label: 'Driver Account'
         };
@@ -82,15 +77,13 @@ export default function Header({
         return {
           bg: '#D97706',
           color: '#FFFFFF',
-          border: '#B45309',
           icon: Fuel,
-          label: 'Fuel Pump Operator'
+          label: 'Fuel Station'
         };
       default:
         return {
           bg: '#475569',
           color: '#FFFFFF',
-          border: '#334155',
           icon: UserCheck,
           label: r
         };
@@ -117,18 +110,6 @@ export default function Header({
       </div>
 
       <div className="header-right">
-        {/* Reset button only for admin or when needed */}
-        {role === 'Admin' && (
-          <button 
-            className="btn-secondary header-reset-btn"
-            onClick={onResetData}
-            title="Restore original sample records for Vehicles, Drivers, Pumps, and Users"
-          >
-            <RotateCcw size={14} />
-            <span>Reset Demo Data</span>
-          </button>
-        )}
-
         {/* Current Role Badge */}
         <div 
           className="header-role-badge"
@@ -144,7 +125,7 @@ export default function Header({
             fontWeight: 700,
             boxShadow: '0 1px 3px rgba(0,0,0,0.12)'
           }}
-          title={`Currently logged in with role: ${role}`}
+          title={`Active Session Role: ${role}`}
         >
           <RoleIcon size={14} />
           <span>Role: {role}</span>
@@ -159,7 +140,7 @@ export default function Header({
           </div>
           <div className="user-profile-text" style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.2 }}>
-              {currentUser?.fullName || currentUser?.username || 'Fleet Admin'}
+              {currentUser?.fullName || currentUser?.username || 'Master Admin'}
             </span>
             <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
               @{currentUser?.username || 'admin'}

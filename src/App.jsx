@@ -16,19 +16,21 @@ import TestDropdownModal from './components/TestDropdownModal';
 import { 
   getVehicles, 
   addVehicle, 
+  updateVehicle,
   deleteVehicle,
   getDrivers, 
   addDriver, 
+  updateDriver,
   deleteDriver,
   getPumps, 
   addPump, 
+  updatePump,
   deletePump,
   getTransactions,
   addFuelIssue,
   deleteFuelIssue,
   updateTransactionStatus,
   getDashboardMetrics,
-  resetToSampleData,
   getCurrentUser,
   setCurrentUser,
   logout,
@@ -123,6 +125,11 @@ export default function App() {
     reloadAllData();
   };
 
+  const handleUpdateVehicle = (id, updatedData) => {
+    updateVehicle(id, updatedData);
+    reloadAllData();
+  };
+
   const handleDeleteVehicle = (id) => {
     if (!canDelete) {
       showToast('Action not permitted: Managers cannot delete vehicle records.', 'danger');
@@ -138,6 +145,11 @@ export default function App() {
     reloadAllData();
   };
 
+  const handleUpdateDriver = (id, updatedData) => {
+    updateDriver(id, updatedData);
+    reloadAllData();
+  };
+
   const handleDeleteDriver = (id) => {
     if (!canDelete) {
       showToast('Action not permitted: Managers cannot delete driver records.', 'danger');
@@ -150,6 +162,11 @@ export default function App() {
   // CRUD for Pumps
   const handleAddPump = (newPumpData) => {
     addPump(newPumpData);
+    reloadAllData();
+  };
+
+  const handleUpdatePump = (id, updatedData) => {
+    updatePump(id, updatedData);
     reloadAllData();
   };
 
@@ -176,15 +193,6 @@ export default function App() {
     }
     deleteFuelIssue(id);
     reloadAllData();
-  };
-
-  // Reset to default sample records
-  const handleResetData = () => {
-    if (window.confirm('Reset all records, users, and slips back to the original sample dataset?')) {
-      resetToSampleData();
-      reloadAllData();
-      showToast('Sample dataset and user accounts restored successfully!', 'success');
-    }
   };
 
   // 1. If no user is logged in, show the Login Screen
@@ -320,7 +328,6 @@ export default function App() {
           activeTab={activeTab}
           currentUser={currentUser}
           onLogout={handleLogout}
-          onResetData={handleResetData}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 
@@ -365,6 +372,7 @@ export default function App() {
             vehicles={vehicles}
             drivers={drivers}
             onAddVehicle={handleAddVehicle}
+            onUpdateVehicle={handleUpdateVehicle}
             onDeleteVehicle={handleDeleteVehicle}
             onShowToast={showToast}
             canDelete={canDelete}
@@ -376,6 +384,7 @@ export default function App() {
             drivers={drivers}
             vehicles={vehicles}
             onAddDriver={handleAddDriver}
+            onUpdateDriver={handleUpdateDriver}
             onDeleteDriver={handleDeleteDriver}
             onShowToast={showToast}
             canDelete={canDelete}
@@ -386,6 +395,7 @@ export default function App() {
           <ManagePumps 
             pumps={pumps}
             onAddPump={handleAddPump}
+            onUpdatePump={handleUpdatePump}
             onDeletePump={handleDeletePump}
             onShowToast={showToast}
             canDelete={canDelete}

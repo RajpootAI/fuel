@@ -63,7 +63,7 @@ export default function Sidebar({
     },
     {
       id: 'users',
-      label: 'User Accounts',
+      label: 'Manage Staff Users',
       icon: ShieldCheck,
       badge: counts.users ? `${counts.users}` : null,
       adminOnly: true

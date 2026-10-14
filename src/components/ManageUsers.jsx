@@ -150,7 +150,7 @@ export default function ManageUsers({
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-              User Accounts & Credentials
+              Manage Staff Users
             </h3>
             <span 
               style={{ 
@@ -166,7 +166,7 @@ export default function ManageUsers({
             </span>
           </div>
           <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Create and manage login usernames and passwords for Managers, Drivers, and Fuel Pumps
+            Create and manage login accounts for Managers and other Admins
           </p>
         </div>
 

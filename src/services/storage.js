@@ -6,13 +6,14 @@ import {
   INITIAL_USERS
 } from '../data/initialData.js';
 
+// Production Storage Keys (Clean database without demo data)
 const STORAGE_KEYS = {
-  DRIVERS: 'fuel_mgmt_drivers_v1',
-  VEHICLES: 'fuel_mgmt_vehicles_v1',
-  PUMPS: 'fuel_mgmt_pumps_v1',
-  TRANSACTIONS: 'fuel_mgmt_transactions_v1',
-  USERS: 'fuel_mgmt_users_v1',
-  CURRENT_USER: 'fuel_mgmt_current_user_v1'
+  DRIVERS: 'fuel_mgmt_prod_drivers',
+  VEHICLES: 'fuel_mgmt_prod_vehicles',
+  PUMPS: 'fuel_mgmt_prod_pumps',
+  TRANSACTIONS: 'fuel_mgmt_prod_transactions',
+  USERS: 'fuel_mgmt_prod_users',
+  CURRENT_USER: 'fuel_mgmt_prod_current_user'
 };
 
 // Safe JSON parser with fallback
@@ -57,16 +58,18 @@ export function initializeStorage() {
   }
 }
 
-// Reset all data to factory sample records
+// Reset all data to clean empty state (keeping Master Admin only)
 export function resetToSampleData() {
-  safeSet(STORAGE_KEYS.DRIVERS, INITIAL_DRIVERS);
-  safeSet(STORAGE_KEYS.VEHICLES, INITIAL_VEHICLES);
-  safeSet(STORAGE_KEYS.PUMPS, INITIAL_PUMPS);
-  safeSet(STORAGE_KEYS.TRANSACTIONS, INITIAL_TRANSACTIONS);
+  safeSet(STORAGE_KEYS.DRIVERS, []);
+  safeSet(STORAGE_KEYS.VEHICLES, []);
+  safeSet(STORAGE_KEYS.PUMPS, []);
+  safeSet(STORAGE_KEYS.TRANSACTIONS, []);
   safeSet(STORAGE_KEYS.USERS, INITIAL_USERS);
 }
 
+// ==========================================
 // DRIVERS API
+// ==========================================
 export function getDrivers() {
   initializeStorage();
   return safeGet(STORAGE_KEYS.DRIVERS, INITIAL_DRIVERS);
@@ -74,24 +77,76 @@ export function getDrivers() {
 
 export function addDriver(driverData) {
   const drivers = getDrivers();
+  const driverId = `DRV-${Date.now().toString().slice(-4)}`;
+  const cleanName = driverData.name.trim();
+
   const newDriver = {
-    id: `DRV-${Date.now().toString().slice(-4)}`,
-    name: driverData.name.trim(),
-    phone: driverData.phone.trim(),
-    cnic: driverData.cnic.trim(),
-    licenseNumber: driverData.licenseNumber.trim(),
+    id: driverId,
+    name: cleanName,
+    phone: driverData.phone?.trim() || '',
+    cnic: driverData.cnic?.trim() || '',
+    licenseNumber: driverData.licenseNumber?.trim() || '',
+    username: driverData.username?.trim().toLowerCase() || '',
+    password: driverData.password || '',
     status: driverData.status || 'Active',
     createdAt: new Date().toISOString().split('T')[0]
   };
+
   const updated = [newDriver, ...drivers];
   safeSet(STORAGE_KEYS.DRIVERS, updated);
+
+  // If login credentials provided, auto-create Driver User Account
+  if (newDriver.username && newDriver.password) {
+    syncUserAccountForEntity({
+      entityId: driverId,
+      username: newDriver.username,
+      password: newDriver.password,
+      fullName: cleanName,
+      driverName: cleanName,
+      role: 'Driver'
+    });
+  }
+
   return newDriver;
 }
 
 export function updateDriver(id, driverData) {
   const drivers = getDrivers();
-  const updated = drivers.map((d) => (d.id === id ? { ...d, ...driverData } : d));
+  const cleanName = driverData.name ? driverData.name.trim() : '';
+
+  const updated = drivers.map((d) => {
+    if (d.id === id) {
+      return {
+        ...d,
+        ...driverData,
+        name: cleanName || d.name,
+        phone: driverData.phone !== undefined ? driverData.phone.trim() : d.phone,
+        cnic: driverData.cnic !== undefined ? driverData.cnic.trim() : d.cnic,
+        licenseNumber: driverData.licenseNumber !== undefined ? driverData.licenseNumber.trim() : d.licenseNumber,
+        username: driverData.username !== undefined ? driverData.username.trim().toLowerCase() : d.username,
+        password: driverData.password !== undefined ? driverData.password : d.password
+      };
+    }
+    return d;
+  });
+
   safeSet(STORAGE_KEYS.DRIVERS, updated);
+
+  // Update linked user account if credentials exist
+  if (driverData.username || driverData.password) {
+    const updatedTarget = updated.find(d => d.id === id);
+    if (updatedTarget?.username && updatedTarget?.password) {
+      syncUserAccountForEntity({
+        entityId: id,
+        username: updatedTarget.username,
+        password: updatedTarget.password,
+        fullName: updatedTarget.name,
+        driverName: updatedTarget.name,
+        role: 'Driver'
+      });
+    }
+  }
+
   return updated;
 }
 
@@ -101,7 +156,7 @@ export function deleteDriver(id) {
   const updated = drivers.filter((d) => d.id !== id);
   safeSet(STORAGE_KEYS.DRIVERS, updated);
 
-  // If this driver was assigned to any vehicle, unassign them gracefully
+  // If this driver was assigned to any vehicle, unassign gracefully
   if (target) {
     const vehicles = getVehicles();
     const updatedVehicles = vehicles.map(v => {
@@ -111,12 +166,17 @@ export function deleteDriver(id) {
       return v;
     });
     safeSet(STORAGE_KEYS.VEHICLES, updatedVehicles);
+
+    // Also remove linked user account if exists
+    removeUserAccountForEntity(id, target.username);
   }
 
   return updated;
 }
 
+// ==========================================
 // VEHICLES API
+// ==========================================
 export function getVehicles() {
   initializeStorage();
   return safeGet(STORAGE_KEYS.VEHICLES, INITIAL_VEHICLES);
@@ -142,7 +202,10 @@ export function updateVehicle(id, vehicleData) {
   const updated = vehicles.map((v) => (v.id === id ? {
     ...v,
     ...vehicleData,
-    vehicleNumber: vehicleData.vehicleNumber ? vehicleData.vehicleNumber.trim().toUpperCase() : v.vehicleNumber
+    vehicleNumber: vehicleData.vehicleNumber ? vehicleData.vehicleNumber.trim().toUpperCase() : v.vehicleNumber,
+    vehicleType: vehicleData.vehicleType || v.vehicleType,
+    assignedDriverName: vehicleData.assignedDriverName !== undefined ? vehicleData.assignedDriverName.trim() : v.assignedDriverName,
+    status: vehicleData.status || v.status
   } : v));
   safeSet(STORAGE_KEYS.VEHICLES, updated);
   return updated;
@@ -155,7 +218,9 @@ export function deleteVehicle(id) {
   return updated;
 }
 
+// ==========================================
 // FUEL PUMPS API
+// ==========================================
 export function getPumps() {
   initializeStorage();
   return safeGet(STORAGE_KEYS.PUMPS, INITIAL_PUMPS);
@@ -163,59 +228,96 @@ export function getPumps() {
 
 export function addPump(pumpData) {
   const pumps = getPumps();
+  const pumpId = `PMP-${Date.now().toString().slice(-4)}`;
+  const cleanName = pumpData.pumpName.trim();
+
   const newPump = {
-    id: `PMP-${Date.now().toString().slice(-4)}`,
-    pumpName: pumpData.pumpName.trim(),
-    location: pumpData.location.trim(),
-    contactPerson: pumpData.contactPerson.trim(),
+    id: pumpId,
+    pumpName: cleanName,
+    location: pumpData.location?.trim() || '',
+    contactPerson: pumpData.contactPerson?.trim() || '',
+    username: pumpData.username?.trim().toLowerCase() || '',
+    password: pumpData.password || '',
     status: pumpData.status || 'Active',
     createdAt: new Date().toISOString().split('T')[0]
   };
+
   const updated = [newPump, ...pumps];
   safeSet(STORAGE_KEYS.PUMPS, updated);
+
+  // If login credentials provided, auto-create Fuel Pump User Account
+  if (newPump.username && newPump.password) {
+    syncUserAccountForEntity({
+      entityId: pumpId,
+      username: newPump.username,
+      password: newPump.password,
+      fullName: cleanName,
+      pumpName: cleanName,
+      role: 'Fuel Pump'
+    });
+  }
+
   return newPump;
 }
 
 export function updatePump(id, pumpData) {
   const pumps = getPumps();
-  const updated = pumps.map((p) => (p.id === id ? { ...p, ...pumpData } : p));
+  const cleanName = pumpData.pumpName ? pumpData.pumpName.trim() : '';
+
+  const updated = pumps.map((p) => {
+    if (p.id === id) {
+      return {
+        ...p,
+        ...pumpData,
+        pumpName: cleanName || p.pumpName,
+        location: pumpData.location !== undefined ? pumpData.location.trim() : p.location,
+        contactPerson: pumpData.contactPerson !== undefined ? pumpData.contactPerson.trim() : p.contactPerson,
+        username: pumpData.username !== undefined ? pumpData.username.trim().toLowerCase() : p.username,
+        password: pumpData.password !== undefined ? pumpData.password : p.password
+      };
+    }
+    return p;
+  });
+
   safeSet(STORAGE_KEYS.PUMPS, updated);
+
+  // Update linked user account if credentials exist
+  if (pumpData.username || pumpData.password) {
+    const updatedTarget = updated.find(p => p.id === id);
+    if (updatedTarget?.username && updatedTarget?.password) {
+      syncUserAccountForEntity({
+        entityId: id,
+        username: updatedTarget.username,
+        password: updatedTarget.password,
+        fullName: updatedTarget.pumpName,
+        pumpName: updatedTarget.pumpName,
+        role: 'Fuel Pump'
+      });
+    }
+  }
+
   return updated;
 }
 
 export function deletePump(id) {
   const pumps = getPumps();
+  const target = pumps.find(p => p.id === id);
   const updated = pumps.filter((p) => p.id !== id);
   safeSet(STORAGE_KEYS.PUMPS, updated);
+
+  if (target) {
+    removeUserAccountForEntity(id, target.username);
+  }
+
   return updated;
 }
 
-// TRANSACTIONS API
+// ==========================================
+// TRANSACTIONS / FUEL ISSUANCE API
+// ==========================================
 export function getTransactions() {
   initializeStorage();
-  const txns = safeGet(STORAGE_KEYS.TRANSACTIONS, INITIAL_TRANSACTIONS);
-  let needsSync = false;
-  const normalized = txns.map((t, idx) => {
-    let item = { ...t };
-    if (!item.slipNumber) {
-      needsSync = true;
-      item.slipNumber = `FL-${1001 + idx}`;
-      item.dateTime = item.dateTime || (item.date ? `${item.date}T10:00` : new Date().toISOString().slice(0, 16));
-      item.fuelType = item.fuelType?.includes('Diesel') ? 'Diesel' : (item.fuelType || 'Petrol');
-      item.odometerReading = item.odometerReading || (45000 + idx * 4500);
-      item.remarks = item.remarks || 'Official fleet operation travel';
-    }
-    if (!item.status) {
-      needsSync = true;
-      item.status = (idx < 2) ? 'Filled' : 'Pending';
-      item.filledAt = (idx < 2) ? (item.dateTime || new Date().toISOString()) : null;
-    }
-    return item;
-  });
-  if (needsSync) {
-    safeSet(STORAGE_KEYS.TRANSACTIONS, normalized);
-  }
-  return normalized;
+  return safeGet(STORAGE_KEYS.TRANSACTIONS, INITIAL_TRANSACTIONS);
 }
 
 // Generate sequential slip/voucher number (e.g., FL-1001, FL-1002...)
@@ -321,7 +423,7 @@ export function getDashboardMetrics() {
 }
 
 // ==========================================
-// PHASE 5 & 6: USERS & AUTHENTICATION API
+// USER ACCOUNTS & AUTHENTICATION API
 // ==========================================
 
 export function getUsers() {
@@ -335,13 +437,13 @@ export function addUser(userData) {
 
   // Validate duplicate
   if (users.some(u => u.username.toLowerCase() === cleanUsername)) {
-    throw new Error(`Username "${cleanUsername}" already exists.`);
+    throw new Error(`Username "${cleanUsername}" is already taken.`);
   }
 
   const newUser = {
     id: `USR-${Date.now().toString().slice(-4)}`,
     username: cleanUsername,
-    email: userData.email?.trim() || `${cleanUsername}@fuelflow.com`,
+    email: userData.email?.trim() || `${cleanUsername}@company.com`,
     password: userData.password || 'password123',
     fullName: userData.fullName?.trim() || cleanUsername,
     driverName: userData.driverName?.trim() || (userData.role === 'Driver' ? userData.fullName?.trim() : undefined),
@@ -356,16 +458,83 @@ export function addUser(userData) {
   return newUser;
 }
 
+export function updateUser(id, userData) {
+  const users = getUsers();
+  const updated = users.map((u) => {
+    if (u.id === id) {
+      return {
+        ...u,
+        ...userData,
+        username: userData.username ? userData.username.trim().toLowerCase() : u.username,
+        email: userData.email !== undefined ? userData.email.trim() : u.email,
+        password: userData.password || u.password,
+        fullName: userData.fullName !== undefined ? userData.fullName.trim() : u.fullName,
+        role: userData.role || u.role,
+        status: userData.status || u.status
+      };
+    }
+    return u;
+  });
+  safeSet(STORAGE_KEYS.USERS, updated);
+  return updated;
+}
+
 export function deleteUser(id) {
   const users = getUsers();
-  // Prevent deleting primary admin
+  // Prevent deleting primary master admin
   const target = users.find(u => u.id === id);
   if (target?.username === 'admin') {
-    throw new Error('Default Administrator account cannot be deleted.');
+    throw new Error('Default Master Admin account cannot be deleted.');
   }
   const updated = users.filter((u) => u.id !== id);
   safeSet(STORAGE_KEYS.USERS, updated);
   return updated;
+}
+
+// Internal helper to create or update linked user account for drivers and pumps
+function syncUserAccountForEntity({ entityId, username, password, fullName, driverName, pumpName, role }) {
+  const users = getUsers();
+  const cleanUsername = username.trim().toLowerCase();
+  const existingIdx = users.findIndex(u => u.linkedEntityId === entityId || u.username.toLowerCase() === cleanUsername);
+
+  if (existingIdx >= 0) {
+    users[existingIdx] = {
+      ...users[existingIdx],
+      username: cleanUsername,
+      password: password,
+      fullName: fullName,
+      driverName: driverName,
+      pumpName: pumpName,
+      role: role
+    };
+  } else {
+    users.push({
+      id: `USR-${Date.now().toString().slice(-4)}`,
+      linkedEntityId: entityId,
+      username: cleanUsername,
+      password: password,
+      fullName: fullName,
+      driverName: driverName,
+      pumpName: pumpName,
+      email: `${cleanUsername}@company.com`,
+      role: role,
+      status: 'Active',
+      createdAt: new Date().toISOString().split('T')[0]
+    });
+  }
+
+  safeSet(STORAGE_KEYS.USERS, users);
+}
+
+function removeUserAccountForEntity(entityId, username) {
+  const users = getUsers();
+  const updated = users.filter(u => {
+    if (u.username === 'admin') return true;
+    if (u.linkedEntityId === entityId) return false;
+    if (username && u.username.toLowerCase() === username.toLowerCase()) return false;
+    return true;
+  });
+  safeSet(STORAGE_KEYS.USERS, updated);
 }
 
 // Session Management
@@ -392,27 +561,32 @@ export function logout() {
   localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
 }
 
-export function authenticate(identifier, password, selectedRole) {
+export function authenticate(identifier, password) {
   const users = getUsers();
   const cleanId = (identifier || '').trim().toLowerCase();
 
   const found = users.find((u) => {
-    const matchesId = u.username.toLowerCase() === cleanId || u.email?.toLowerCase() === cleanId;
-    const matchesRole = !selectedRole || u.role.toLowerCase() === selectedRole.toLowerCase();
-    return matchesId && matchesRole;
+    return u.username.toLowerCase() === cleanId || u.email?.toLowerCase() === cleanId;
   });
 
   if (!found) {
     return { 
       success: false, 
-      error: `No ${selectedRole || 'user'} account found matching "${identifier}". Try Quick Demo Login below.` 
+      error: `Invalid credentials. No user found matching "${identifier}".` 
     };
   }
 
   if (found.password !== password) {
     return { 
       success: false, 
-      error: 'Invalid password. Please check your credentials or use Quick Demo Login.' 
+      error: 'Invalid password. Please check your credentials.' 
+    };
+  }
+
+  if (found.status === 'Inactive') {
+    return {
+      success: false,
+      error: 'This account has been deactivated. Please contact the administrator.'
     };
   }
 
@@ -426,35 +600,4 @@ export function authenticate(identifier, password, selectedRole) {
 
   setCurrentUser(found);
   return { success: true, user: found };
-}
-
-export function quickLoginAsRole(role) {
-  const users = getUsers();
-  const match = users.find((u) => u.role.toLowerCase() === role.toLowerCase());
-  if (match) {
-    if (match.role === 'Driver') {
-      match.driverName = match.driverName || 'Muhammad Ali';
-      match.fullName = match.fullName || 'Muhammad Ali';
-    }
-    if (match.role === 'Fuel Pump') {
-      match.pumpName = match.pumpName || 'PSO Main Boulevard Station';
-      match.fullName = match.fullName || 'PSO Main Boulevard Station';
-    }
-    setCurrentUser(match);
-    return match;
-  }
-
-  // Fallback create on the fly if somehow missing
-  const fallback = {
-    id: `USR-${Date.now()}`,
-    username: role.toLowerCase().replace(/\s+/g, ''),
-    fullName: role === 'Driver' ? 'Muhammad Ali' : role === 'Fuel Pump' ? 'PSO Main Boulevard Station' : `${role} User`,
-    driverName: role === 'Driver' ? 'Muhammad Ali' : undefined,
-    pumpName: role === 'Fuel Pump' ? 'PSO Main Boulevard Station' : undefined,
-    role: role,
-    status: 'Active',
-    createdAt: new Date().toISOString().split('T')[0]
-  };
-  setCurrentUser(fallback);
-  return fallback;
 }

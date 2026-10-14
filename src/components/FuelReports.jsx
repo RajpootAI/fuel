@@ -34,6 +34,7 @@ export default function FuelReports({
   const [selectedVehicle, setSelectedVehicle] = useState('ALL');
   const [selectedDriver, setSelectedDriver] = useState('ALL');
   const [selectedPump, setSelectedPump] = useState('ALL');
+  const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,6 +44,7 @@ export default function FuelReports({
     setSelectedVehicle('ALL');
     setSelectedDriver('ALL');
     setSelectedPump('ALL');
+    setSelectedStatus('ALL');
     setFromDate('');
     setToDate('');
     setSearchQuery('');
@@ -67,7 +69,14 @@ export default function FuelReports({
         return false;
       }
 
-      // 4. Date Range filter
+      // 4. Status filter
+      if (selectedStatus !== 'ALL') {
+        const isFilled = tx.status === 'Filled';
+        if (selectedStatus === 'Filled' && !isFilled) return false;
+        if (selectedStatus === 'Pending' && isFilled) return false;
+      }
+
+      // 5. Date Range filter
       const txDateStr = tx.dateTime ? tx.dateTime.slice(0, 10) : (tx.date || '');
       if (fromDate && txDateStr < fromDate) {
         return false;
@@ -76,7 +85,7 @@ export default function FuelReports({
         return false;
       }
 
-      // 5. Search Query
+      // 6. Search Query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const slip = (tx.slipNumber || tx.id || '').toLowerCase();
@@ -91,7 +100,7 @@ export default function FuelReports({
 
       return true;
     });
-  }, [transactions, selectedVehicle, selectedDriver, selectedPump, fromDate, toDate, searchQuery]);
+  }, [transactions, selectedVehicle, selectedDriver, selectedPump, selectedStatus, fromDate, toDate, searchQuery]);
 
   // Dynamic Summary Metrics
   const summaryMetrics = useMemo(() => {
@@ -125,6 +134,7 @@ export default function FuelReports({
       'Quantity (Liters)',
       'Rate per Liter (PKR)',
       'Total Amount (PKR)',
+      'Status',
       'Trip Remarks'
     ];
 
@@ -139,6 +149,7 @@ export default function FuelReports({
       `"${Number(r.liters || 0).toFixed(2)}"`,
       `"${Number(r.ratePerLiter || 0).toFixed(2)}"`,
       `"${Number(r.totalCost || 0).toFixed(2)}"`,
+      `"${r.status || 'Pending'}"`,
       `"${(r.remarks || '').replace(/"/g, '""')}"`
     ]);
 
@@ -290,7 +301,24 @@ export default function FuelReports({
               </select>
             </div>
 
-            {/* Filter 4A: From Date */}
+            {/* Filter 4: Voucher Status */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Clock3 size={14} style={{ color: '#2563EB' }} />
+                Filter by Status
+              </label>
+              <select 
+                className="form-select"
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+              >
+                <option value="ALL">All Statuses (Pending & Filled)</option>
+                <option value="Pending">Pending Dispensing</option>
+                <option value="Filled">Filled / Completed</option>
+              </select>
+            </div>
+
+            {/* Filter 5A: From Date */}
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <Calendar size={14} style={{ color: '#2563EB' }} />

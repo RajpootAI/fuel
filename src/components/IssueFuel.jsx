@@ -232,7 +232,7 @@ export default function IssueFuel({
                 borderRadius: '12px' 
               }}
             >
-              Phase 2 Module
+              Official Slip Generator
             </span>
           </div>
           <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
