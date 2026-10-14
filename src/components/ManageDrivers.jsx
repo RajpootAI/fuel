@@ -17,7 +17,8 @@ export default function ManageDrivers({
   vehicles, 
   onAddDriver, 
   onDeleteDriver, 
-  onShowToast 
+  onShowToast,
+  canDelete = true
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -265,14 +266,20 @@ export default function ManageDrivers({
                       </td>
 
                       <td style={{ textAlign: 'right' }}>
-                        <button 
-                          className="btn-icon-delete"
-                          onClick={() => setDeleteTarget(driver)}
-                          title="Delete driver"
-                        >
-                          <Trash2 size={15} />
-                          <span>Delete</span>
-                        </button>
+                        {canDelete ? (
+                          <button 
+                            className="btn-icon-delete"
+                            onClick={() => setDeleteTarget(driver)}
+                            title="Delete driver"
+                          >
+                            <Trash2 size={15} />
+                            <span>Delete</span>
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                            View Only
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );

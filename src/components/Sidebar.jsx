@@ -1,24 +1,28 @@
 import React from 'react';
 import { 
   LayoutDashboard, 
-  Receipt,
-  FileSpreadsheet,
+  Receipt, 
+  FileSpreadsheet, 
   Car, 
   Users, 
   Fuel, 
   ShieldCheck, 
-  ChevronRight,
-  X,
-  Sparkles
+  ChevronRight, 
+  X, 
+  UserCog,
+  KeyRound
 } from 'lucide-react';
 
 export default function Sidebar({ 
   activeTab, 
   setActiveTab, 
   counts, 
+  currentUser,
   isOpen, 
   setIsOpen 
 }) {
+  const isAdmin = currentUser?.role === 'Admin';
+
   const navItems = [
     {
       id: 'dashboard',
@@ -56,8 +60,17 @@ export default function Sidebar({
       label: 'Fuel Pumps (Stations)',
       icon: Fuel,
       badge: counts.pumps
+    },
+    {
+      id: 'users',
+      label: 'User Accounts',
+      icon: ShieldCheck,
+      badge: counts.users ? `${counts.users}` : null,
+      adminOnly: true
     }
   ];
+
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <>
@@ -88,8 +101,11 @@ export default function Sidebar({
         </div>
 
         <nav className="sidebar-nav">
-          <div className="nav-section-title">Master Records & Ops</div>
-          {navItems.map((item) => {
+          <div className="nav-section-title">
+            {isAdmin ? 'Full Fleet Admin' : 'Manager Operations'}
+          </div>
+
+          {visibleNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
@@ -132,14 +148,14 @@ export default function Sidebar({
           <div className="system-status-pill">
             <div className="status-dot-active" />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#F8FAFC' }}>
-                Phase 1 & 2 Active
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#F8FAFC' }}>
+                Role: {currentUser?.role || 'Guest'}
               </div>
               <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>
-                Slips & Records Synced
+                {isAdmin ? 'All Permissions Active' : 'Restricted (Read & Issue)'}
               </div>
             </div>
-            <ShieldCheck size={16} style={{ color: '#10B981' }} />
+            <ShieldCheck size={16} style={{ color: isAdmin ? '#10B981' : '#38BDF8' }} />
           </div>
         </div>
       </aside>

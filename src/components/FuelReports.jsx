@@ -25,7 +25,8 @@ export default function FuelReports({
   pumps = [], 
   onDeleteSlip, 
   onOpenSlipPreview, 
-  onShowToast 
+  onShowToast,
+  canDelete = true
 }) {
   // Filter States
   const [selectedVehicle, setSelectedVehicle] = useState('ALL');
@@ -573,20 +574,22 @@ export default function FuelReports({
                           <span>View / Reprint Slip</span>
                         </button>
 
-                        {/* Delete Button */}
-                        <button 
-                          className="btn-icon-delete"
-                          style={{ padding: '5px 8px' }}
-                          onClick={() => {
-                            if (window.confirm(`Are you sure you want to permanently delete Slip ${r.slipNumber || r.id}?`)) {
-                              onDeleteSlip(r.id);
-                              onShowToast(`Slip ${r.slipNumber || r.id} deleted`, 'danger');
-                            }
-                          }}
-                          title="Delete transaction record"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {/* Delete Button (Admin Only) */}
+                        {canDelete && (
+                          <button 
+                            className="btn-icon-delete"
+                            style={{ padding: '5px 8px' }}
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to permanently delete Slip ${r.slipNumber || r.id}?`)) {
+                                onDeleteSlip(r.id);
+                                onShowToast(`Slip ${r.slipNumber || r.id} deleted`, 'danger');
+                              }
+                            }}
+                            title="Delete transaction record"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -2,14 +2,17 @@ import {
   INITIAL_DRIVERS,
   INITIAL_VEHICLES,
   INITIAL_PUMPS,
-  INITIAL_TRANSACTIONS
+  INITIAL_TRANSACTIONS,
+  INITIAL_USERS
 } from '../data/initialData.js';
 
 const STORAGE_KEYS = {
   DRIVERS: 'fuel_mgmt_drivers_v1',
   VEHICLES: 'fuel_mgmt_vehicles_v1',
   PUMPS: 'fuel_mgmt_pumps_v1',
-  TRANSACTIONS: 'fuel_mgmt_transactions_v1'
+  TRANSACTIONS: 'fuel_mgmt_transactions_v1',
+  USERS: 'fuel_mgmt_users_v1',
+  CURRENT_USER: 'fuel_mgmt_current_user_v1'
 };
 
 // Safe JSON parser with fallback
@@ -49,6 +52,9 @@ export function initializeStorage() {
   if (!localStorage.getItem(STORAGE_KEYS.TRANSACTIONS)) {
     safeSet(STORAGE_KEYS.TRANSACTIONS, INITIAL_TRANSACTIONS);
   }
+  if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
+    safeSet(STORAGE_KEYS.USERS, INITIAL_USERS);
+  }
 }
 
 // Reset all data to factory sample records
@@ -57,6 +63,7 @@ export function resetToSampleData() {
   safeSet(STORAGE_KEYS.VEHICLES, INITIAL_VEHICLES);
   safeSet(STORAGE_KEYS.PUMPS, INITIAL_PUMPS);
   safeSet(STORAGE_KEYS.TRANSACTIONS, INITIAL_TRANSACTIONS);
+  safeSet(STORAGE_KEYS.USERS, INITIAL_USERS);
 }
 
 // DRIVERS API
@@ -284,4 +291,123 @@ export function getDashboardMetrics() {
     driversList: drivers,
     pumpsList: pumps
   };
+}
+
+// ==========================================
+// PHASE 5: USERS & AUTHENTICATION API
+// ==========================================
+
+export function getUsers() {
+  initializeStorage();
+  return safeGet(STORAGE_KEYS.USERS, INITIAL_USERS);
+}
+
+export function addUser(userData) {
+  const users = getUsers();
+  const cleanUsername = userData.username.trim().toLowerCase();
+
+  // Validate duplicate
+  if (users.some(u => u.username.toLowerCase() === cleanUsername)) {
+    throw new Error(`Username "${cleanUsername}" already exists.`);
+  }
+
+  const newUser = {
+    id: `USR-${Date.now().toString().slice(-4)}`,
+    username: cleanUsername,
+    email: userData.email?.trim() || `${cleanUsername}@fuelflow.com`,
+    password: userData.password || 'password123',
+    fullName: userData.fullName?.trim() || cleanUsername,
+    role: userData.role || 'Manager',
+    status: userData.status || 'Active',
+    createdAt: new Date().toISOString().split('T')[0]
+  };
+
+  const updated = [...users, newUser];
+  safeSet(STORAGE_KEYS.USERS, updated);
+  return newUser;
+}
+
+export function deleteUser(id) {
+  const users = getUsers();
+  // Prevent deleting primary admin
+  const target = users.find(u => u.id === id);
+  if (target?.username === 'admin') {
+    throw new Error('Default Administrator account cannot be deleted.');
+  }
+  const updated = users.filter((u) => u.id !== id);
+  safeSet(STORAGE_KEYS.USERS, updated);
+  return updated;
+}
+
+// Session Management
+export function getCurrentUser() {
+  initializeStorage();
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    return null;
+  }
+}
+
+export function setCurrentUser(user) {
+  if (!user) {
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  } else {
+    safeSet(STORAGE_KEYS.CURRENT_USER, user);
+  }
+}
+
+export function logout() {
+  localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+}
+
+export function authenticate(identifier, password, selectedRole) {
+  const users = getUsers();
+  const cleanId = (identifier || '').trim().toLowerCase();
+
+  const found = users.find((u) => {
+    const matchesId = u.username.toLowerCase() === cleanId || u.email?.toLowerCase() === cleanId;
+    const matchesRole = !selectedRole || u.role.toLowerCase() === selectedRole.toLowerCase();
+    return matchesId && matchesRole;
+  });
+
+  if (!found) {
+    return { 
+      success: false, 
+      error: `No ${selectedRole || 'user'} account found matching "${identifier}". Try Quick Demo Login below.` 
+    };
+  }
+
+  if (found.password !== password) {
+    return { 
+      success: false, 
+      error: 'Invalid password. Please check your credentials or use Quick Demo Login.' 
+    };
+  }
+
+  setCurrentUser(found);
+  return { success: true, user: found };
+}
+
+export function quickLoginAsRole(role) {
+  const users = getUsers();
+  const match = users.find((u) => u.role.toLowerCase() === role.toLowerCase());
+  if (match) {
+    setCurrentUser(match);
+    return match;
+  }
+
+  // Fallback create on the fly if somehow missing
+  const fallback = {
+    id: `USR-${Date.now()}`,
+    username: role.toLowerCase().replace(/\s+/g, ''),
+    fullName: `${role} User`,
+    role: role,
+    status: 'Active',
+    createdAt: new Date().toISOString().split('T')[0]
+  };
+  setCurrentUser(fallback);
+  return fallback;
 }

@@ -26,7 +26,8 @@ export default function IssueFuel({
   onSaveSlip, 
   onDeleteSlip, 
   onOpenSlipPreview,
-  onShowToast 
+  onShowToast,
+  canDelete = true
 }) {
   // Helper to get formatted local datetime string for input: YYYY-MM-DDTHH:mm
   const getCurrentLocalDateTime = () => {
@@ -676,19 +677,21 @@ export default function IssueFuel({
                           <Printer size={13} />
                           <span>Print Slip</span>
                         </button>
-                        <button 
-                          className="btn-icon-delete"
-                          style={{ padding: '5px 8px' }}
-                          onClick={() => {
-                            if (window.confirm(`Delete voucher ${tx.slipNumber || tx.id}?`)) {
-                              onDeleteSlip(tx.id);
-                              onShowToast(`Voucher ${tx.slipNumber || tx.id} deleted`, 'danger');
-                            }
-                          }}
-                          title="Delete slip"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {canDelete && (
+                          <button 
+                            className="btn-icon-delete"
+                            style={{ padding: '5px 8px' }}
+                            onClick={() => {
+                              if (window.confirm(`Delete voucher ${tx.slipNumber || tx.id}?`)) {
+                                onDeleteSlip(tx.id);
+                                onShowToast(`Voucher ${tx.slipNumber || tx.id} deleted`, 'danger');
+                              }
+                            }}
+                            title="Delete slip"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

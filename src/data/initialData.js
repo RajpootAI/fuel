@@ -150,3 +150,47 @@ export const INITIAL_TRANSACTIONS = [
   }
 ];
 
+
+// Phase 5: Seed User Accounts for Role-Based Access Control
+export const INITIAL_USERS = [
+  {
+    id: "USR-001",
+    username: "admin",
+    email: "admin@fuelflow.com",
+    password: "admin123",
+    fullName: "Fleet Administrator",
+    role: "Admin",
+    status: "Active",
+    createdAt: "2026-03-01"
+  },
+  {
+    id: "USR-002",
+    username: "manager",
+    email: "manager@fuelflow.com",
+    password: "manager123",
+    fullName: "Operations Manager",
+    role: "Manager",
+    status: "Active",
+    createdAt: "2026-03-05"
+  },
+  {
+    id: "USR-003",
+    username: "driver1",
+    email: "driver1@fuelflow.com",
+    password: "driver123",
+    fullName: "Muhammad Ali (Driver)",
+    role: "Driver",
+    status: "Active",
+    createdAt: "2026-03-10"
+  },
+  {
+    id: "USR-004",
+    username: "pump1",
+    email: "pump1@fuelflow.com",
+    password: "pump123",
+    fullName: "PSO Station Attendant",
+    role: "Fuel Pump",
+    status: "Active",
+    createdAt: "2026-03-12"
+  }
+];

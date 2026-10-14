@@ -7,6 +7,8 @@ import FuelReports from './components/FuelReports';
 import ManageVehicles from './components/ManageVehicles';
 import ManageDrivers from './components/ManageDrivers';
 import ManagePumps from './components/ManagePumps';
+import ManageUsers from './components/ManageUsers';
+import Login from './components/Login';
 import DualSlipPreview from './components/DualSlipPreview';
 import TestDropdownModal from './components/TestDropdownModal';
 import { 
@@ -23,11 +25,16 @@ import {
   addFuelIssue,
   deleteFuelIssue,
   getDashboardMetrics,
-  resetToSampleData 
+  resetToSampleData,
+  getCurrentUser,
+  setCurrentUser,
+  logout,
+  getUsers
 } from './services/storage';
-import { CheckCircle2, AlertCircle, Layers } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 export default function App() {
+  const [currentUser, setCurrentUserState] = useState(() => getCurrentUser());
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isTestDropdownOpen, setIsTestDropdownOpen] = useState(false);
@@ -37,6 +44,7 @@ export default function App() {
   const [drivers, setDrivers] = useState([]);
   const [pumps, setPumps] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  const [users, setUsers] = useState([]);
   const [metrics, setMetrics] = useState({});
 
   // Dual Printable Slip Preview state
@@ -58,18 +66,47 @@ export default function App() {
     const d = getDrivers();
     const p = getPumps();
     const tx = getTransactions();
+    const u = getUsers();
     const m = getDashboardMetrics();
 
     setVehicles(v);
     setDrivers(d);
     setPumps(p);
     setTransactions(tx);
+    setUsers(u);
     setMetrics(m);
   };
 
   useEffect(() => {
     reloadAllData();
   }, []);
+
+  // Ensure non-admin users cannot access the users tab
+  useEffect(() => {
+    if (activeTab === 'users' && currentUser?.role !== 'Admin') {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab, currentUser]);
+
+  // Handle Authentication
+  const handleLoginSuccess = (user) => {
+    setCurrentUser(user);
+    setCurrentUserState(user);
+    setActiveTab('dashboard');
+    showToast(`Welcome ${user.fullName || user.username}! Logged in as ${user.role}.`, 'success');
+  };
+
+  const handleLogout = () => {
+    logout();
+    setCurrentUserState(null);
+    setActiveTab('dashboard');
+    showToast('Signed out of system successfully.', 'info');
+  };
+
+  // Role permissions
+  const isAdmin = currentUser?.role === 'Admin';
+  // Manager and others cannot delete vehicles, drivers, pumps, or fuel records
+  const canDelete = isAdmin;
 
   // CRUD for Vehicles
   const handleAddVehicle = (newVehicleData) => {
@@ -78,6 +115,10 @@ export default function App() {
   };
 
   const handleDeleteVehicle = (id) => {
+    if (!canDelete) {
+      showToast('Action not permitted: Managers cannot delete vehicle records.', 'danger');
+      return;
+    }
     deleteVehicle(id);
     reloadAllData();
   };
@@ -89,6 +130,10 @@ export default function App() {
   };
 
   const handleDeleteDriver = (id) => {
+    if (!canDelete) {
+      showToast('Action not permitted: Managers cannot delete driver records.', 'danger');
+      return;
+    }
     deleteDriver(id);
     reloadAllData();
   };
@@ -100,6 +145,10 @@ export default function App() {
   };
 
   const handleDeletePump = (id) => {
+    if (!canDelete) {
+      showToast('Action not permitted: Managers cannot delete fuel stations.', 'danger');
+      return;
+    }
     deletePump(id);
     reloadAllData();
   };
@@ -112,18 +161,45 @@ export default function App() {
   };
 
   const handleDeleteFuelSlip = (id) => {
+    if (!canDelete) {
+      showToast('Action not permitted: Managers cannot delete fuel records.', 'danger');
+      return;
+    }
     deleteFuelIssue(id);
     reloadAllData();
   };
 
   // Reset to default sample records
   const handleResetData = () => {
-    if (window.confirm('Reset all records and slips back to the original sample dataset?')) {
+    if (window.confirm('Reset all records, users, and slips back to the original sample dataset?')) {
       resetToSampleData();
       reloadAllData();
-      showToast('Sample dataset restored successfully!', 'success');
+      showToast('Sample dataset and user accounts restored successfully!', 'success');
     }
   };
+
+  // If no user is logged in, show the Login Screen
+  if (!currentUser) {
+    return (
+      <>
+        <Login onLoginSuccess={handleLoginSuccess} />
+        {toast && (
+          <div className="toast-container">
+            <div className={`toast ${toast.type === 'danger' ? 'toast-danger' : toast.type === 'info' ? 'toast-info' : 'toast-success'}`}>
+              {toast.type === 'danger' ? (
+                <AlertCircle size={18} style={{ color: '#EF4444' }} />
+              ) : toast.type === 'info' ? (
+                <Info size={18} style={{ color: '#0284C7' }} />
+              ) : (
+                <CheckCircle2 size={18} style={{ color: '#10B981' }} />
+              )}
+              <span>{toast.message}</span>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="app-layout">
@@ -135,8 +211,10 @@ export default function App() {
           slips: transactions.length,
           vehicles: vehicles.length,
           drivers: drivers.length,
-          pumps: pumps.length
+          pumps: pumps.length,
+          users: users.length
         }}
+        currentUser={currentUser}
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
       />
@@ -145,6 +223,8 @@ export default function App() {
       <div className="main-wrapper">
         <Header 
           activeTab={activeTab}
+          currentUser={currentUser}
+          onLogout={handleLogout}
           onResetData={handleResetData}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
@@ -168,6 +248,7 @@ export default function App() {
             onDeleteSlip={handleDeleteFuelSlip}
             onOpenSlipPreview={(slip) => setSelectedSlipForPreview(slip)}
             onShowToast={showToast}
+            canDelete={canDelete}
           />
         )}
 
@@ -180,6 +261,7 @@ export default function App() {
             onDeleteSlip={handleDeleteFuelSlip}
             onOpenSlipPreview={(slip) => setSelectedSlipForPreview(slip)}
             onShowToast={showToast}
+            canDelete={canDelete}
           />
         )}
 
@@ -190,6 +272,7 @@ export default function App() {
             onAddVehicle={handleAddVehicle}
             onDeleteVehicle={handleDeleteVehicle}
             onShowToast={showToast}
+            canDelete={canDelete}
           />
         )}
 
@@ -200,6 +283,7 @@ export default function App() {
             onAddDriver={handleAddDriver}
             onDeleteDriver={handleDeleteDriver}
             onShowToast={showToast}
+            canDelete={canDelete}
           />
         )}
 
@@ -208,6 +292,14 @@ export default function App() {
             pumps={pumps}
             onAddPump={handleAddPump}
             onDeletePump={handleDeletePump}
+            onShowToast={showToast}
+            canDelete={canDelete}
+          />
+        )}
+
+        {/* Phase 5: Admin User Accounts Management */}
+        {activeTab === 'users' && isAdmin && (
+          <ManageUsers 
             onShowToast={showToast}
           />
         )}
@@ -240,9 +332,11 @@ export default function App() {
       {/* Toast Notification Container */}
       {toast && (
         <div className="toast-container">
-          <div className={`toast ${toast.type === 'danger' ? 'toast-danger' : 'toast-success'}`}>
+          <div className={`toast ${toast.type === 'danger' ? 'toast-danger' : toast.type === 'info' ? 'toast-info' : 'toast-success'}`}>
             {toast.type === 'danger' ? (
               <AlertCircle size={18} style={{ color: '#EF4444' }} />
+            ) : toast.type === 'info' ? (
+              <Info size={18} style={{ color: '#0284C7' }} />
             ) : (
               <CheckCircle2 size={18} style={{ color: '#10B981' }} />
             )}

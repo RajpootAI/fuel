@@ -1,8 +1,20 @@
 import React from 'react';
-import { Menu, RotateCcw, UserCheck } from 'lucide-react';
+import { 
+  Menu, 
+  RotateCcw, 
+  UserCheck, 
+  LogOut, 
+  ShieldCheck, 
+  Briefcase, 
+  Car, 
+  Fuel,
+  Users
+} from 'lucide-react';
 
 export default function Header({ 
   activeTab, 
+  currentUser,
+  onLogout,
   onResetData, 
   onToggleSidebar 
 }) {
@@ -30,10 +42,63 @@ export default function Header({
     pumps: {
       title: 'Manage Fuel Pumps (Stations)',
       subtitle: 'Authorized fuel stations, vendor locations, and pump contact personnel'
+    },
+    users: {
+      title: 'User Accounts & Access Control',
+      subtitle: 'Create and manage login usernames and passwords for Managers, Drivers, and Fuel Pumps (Admin Only)'
     }
   };
 
   const current = titles[activeTab] || titles.dashboard;
+  const role = currentUser?.role || 'Admin';
+
+  const getRoleBadgeStyle = (r) => {
+    switch (r) {
+      case 'Admin':
+        return {
+          bg: '#1E3A8A',
+          color: '#FFFFFF',
+          border: '#172554',
+          icon: ShieldCheck,
+          label: 'Admin (Full Access)'
+        };
+      case 'Manager':
+        return {
+          bg: '#0284C7',
+          color: '#FFFFFF',
+          border: '#0369A1',
+          icon: Briefcase,
+          label: 'Manager (Restricted Delete)'
+        };
+      case 'Driver':
+        return {
+          bg: '#059669',
+          color: '#FFFFFF',
+          border: '#047857',
+          icon: Car,
+          label: 'Driver Account'
+        };
+      case 'Fuel Pump':
+        return {
+          bg: '#D97706',
+          color: '#FFFFFF',
+          border: '#B45309',
+          icon: Fuel,
+          label: 'Fuel Pump Operator'
+        };
+      default:
+        return {
+          bg: '#475569',
+          color: '#FFFFFF',
+          border: '#334155',
+          icon: UserCheck,
+          label: r
+        };
+    }
+  };
+
+  const roleInfo = getRoleBadgeStyle(role);
+  const RoleIcon = roleInfo.icon;
 
   return (
     <header className="top-header">
@@ -52,28 +117,65 @@ export default function Header({
       </div>
 
       <div className="header-right">
-        <button 
-          className="btn-secondary"
-          onClick={onResetData}
-          title="Restore original 3 sample records for Vehicles, Drivers, and Pumps"
-        >
-          <RotateCcw size={15} />
-          <span>Reload Sample Data</span>
-        </button>
+        {/* Reset button only for admin or when needed */}
+        {role === 'Admin' && (
+          <button 
+            className="btn-secondary header-reset-btn"
+            onClick={onResetData}
+            title="Restore original sample records for Vehicles, Drivers, Pumps, and Users"
+          >
+            <RotateCcw size={14} />
+            <span>Reset Demo Data</span>
+          </button>
+        )}
 
+        {/* Current Role Badge */}
+        <div 
+          className="header-role-badge"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            backgroundColor: roleInfo.bg,
+            color: roleInfo.color,
+            padding: '5px 12px',
+            borderRadius: '20px',
+            fontSize: '0.78rem',
+            fontWeight: 700,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.12)'
+          }}
+          title={`Currently logged in with role: ${role}`}
+        >
+          <RoleIcon size={14} />
+          <span>Role: {role}</span>
+        </div>
+
+        {/* User Profile Info */}
         <div className="user-profile-badge">
-          <div className="avatar-circle">
-            <UserCheck size={16} />
+          <div className="avatar-circle" style={{ backgroundColor: '#EFF6FF', color: '#1E3A8A' }}>
+            <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>
+              {(currentUser?.fullName || currentUser?.username || 'A').charAt(0).toUpperCase()}
+            </span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)' }}>
-              Fleet Admin
+          <div className="user-profile-text" style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.2 }}>
+              {currentUser?.fullName || currentUser?.username || 'Fleet Admin'}
             </span>
             <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-              HQ Logistics
+              @{currentUser?.username || 'admin'}
             </span>
           </div>
         </div>
+
+        {/* Logout Button */}
+        <button 
+          className="btn-logout"
+          onClick={onLogout}
+          title="Sign out of system"
+        >
+          <LogOut size={16} />
+          <span className="logout-text">Logout</span>
+        </button>
       </div>
     </header>
   );

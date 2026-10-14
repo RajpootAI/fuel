@@ -16,7 +16,8 @@ export default function ManageVehicles({
   drivers, 
   onAddVehicle, 
   onDeleteVehicle, 
-  onShowToast 
+  onShowToast,
+  canDelete = true
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState('ALL');
@@ -248,14 +249,20 @@ export default function ManageVehicles({
                       {vehicle.createdAt || '2026-03-10'}
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <button 
-                        className="btn-icon-delete"
-                        onClick={() => setDeleteTarget(vehicle)}
-                        title="Delete vehicle record"
-                      >
-                        <Trash2 size={15} />
-                        <span>Delete</span>
-                      </button>
+                      {canDelete ? (
+                        <button 
+                          className="btn-icon-delete"
+                          onClick={() => setDeleteTarget(vehicle)}
+                          title="Delete vehicle record"
+                        >
+                          <Trash2 size={15} />
+                          <span>Delete</span>
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                          View Only
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
